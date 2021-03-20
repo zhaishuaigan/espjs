@@ -1,0 +1,10 @@
+{
+    "Version": "1.0.1",
+    "BaudRate": 115200,
+    "Modules": "http://www.espruino.com/modules/[name].min.js",
+    "Flash": {
+        "esp01": "--port [port] --baud 115200 write_flash --flash_size 512KB 0x0000 espruino_2v08_esp8266_combined_512.bin",
+        "esp01s": "--port [port] --baud 115200 write_flash --flash_size 512KB 0x0000 espruino_2v08_esp8266_combined_512.bin",
+        "esp8266": "--port [port] --baud 115200 write_flash --flash_size 4MB 0x0000 espruino_2v08_esp8266_4mb_combined_4096.bin"
+    }
+}
