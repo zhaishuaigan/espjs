@@ -439,7 +439,7 @@ namespace espjs
             if (System.IO.Directory.Exists(path))
             {
                 // 文件夹
-                string[] files = System.IO.Directory.GetFiles(path, "*.js", System.IO.SearchOption.AllDirectories);
+                string[] files = System.IO.Directory.GetFiles(path, "*", System.IO.SearchOption.AllDirectories);
                 foreach (string file in files)
                 {
                     string name = file.Replace(path + "\\", "").Replace("\\", "/");
