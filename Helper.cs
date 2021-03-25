@@ -101,6 +101,11 @@ namespace espjs
             {
                 OpenPort(port);
                 this.codeHistory.Add(code);
+
+                if (this.codeHistory.Count > 100)
+                {
+                    this.codeHistory.RemoveAt(0);
+                }
                 Thread.Sleep(100);
                 sp.WriteLine(code);
                 //sp.Close();
@@ -189,6 +194,21 @@ namespace espjs
             return decodedString;
         }
 
+        public static int GetZhLen(string str)
+        {
+            int count = 0;
+            Regex regex = new Regex(@"^[\u4E00-\u9FA5]{1,}$");
+            for (int i = 0; i < str.Length; i++)
+            {
+                if (regex.IsMatch(str[i].ToString()))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
         /// <summary>
         /// 生成写入文件的代码
         /// </summary>
@@ -199,13 +219,15 @@ namespace espjs
         {
 
             code = new Regex("\r").Replace(code, "");
+            code = code.Trim();
+            int codeLen = code.Length + GetZhLen(code) * 2 + 1;
             filename = filename.Trim();
             ArrayList result = new ArrayList
             {
                 "f = require('Storage');",
             };
 
-            int len = 500;
+            int len = 100;
             int current = 0;
 
             string buff;
@@ -214,10 +236,31 @@ namespace espjs
             {
                 result.Add("f.write('" + filename + "',atob('" + Btoa(code) + "'));");
             }
+            else if (code.Split('\n')[0].Length <= len)
+            {
+                string[] lines = code.Split('\n');
+                int num = 0;
+                string data = "";
+                foreach (string line in lines)
+                {
+                    data = line + "\n";
+                    len = data.Length + GetZhLen(data) * 2;
+                    if (num == 0)
+                    {
+                        result.Add("f.write('" + filename + "',atob('" + Btoa(data) + "'),0," + codeLen + ");");
+                    }
+                    else
+                    {
+                        result.Add("f.write('" + filename + "',atob('" + Btoa(data) + "')," + current + ");");
+                    }
+                    num++;
+                    current += len;
+                }
+            }
             else
             {
                 buff = code.Substring(current, len);
-                result.Add("f.write('" + filename + "',atob('" + Btoa(buff) + "'),0," + code.Length + ");");
+                result.Add("f.write('" + filename + "',atob('" + Btoa(buff) + "'),0," + codeLen + ");");
                 current += len;
                 while (true)
                 {
