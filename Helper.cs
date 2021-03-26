@@ -206,7 +206,7 @@ namespace espjs
                 }
             }
 
-            return count;
+            return str.Length + count * 2;
         }
 
         /// <summary>
@@ -220,7 +220,7 @@ namespace espjs
 
             code = new Regex("\r").Replace(code, "");
             code = code.Trim();
-            int codeLen = code.Length + GetZhLen(code) * 2 + 1;
+            int codeLen = GetZhLen(code);
             filename = filename.Trim();
             ArrayList result = new ArrayList
             {
@@ -229,51 +229,35 @@ namespace espjs
 
             int len = 100;
             int current = 0;
-
+            int zhCurrent = 0;
+            int buffLen = 0;
             string buff;
 
             if (code.Length <= len)
             {
                 result.Add("f.write('" + filename + "',atob('" + Btoa(code) + "'));");
             }
-            else if (code.Split('\n')[0].Length <= len)
-            {
-                string[] lines = code.Split('\n');
-                int num = 0;
-                string data = "";
-                foreach (string line in lines)
-                {
-                    data = line + "\n";
-                    len = data.Length + GetZhLen(data) * 2;
-                    if (num == 0)
-                    {
-                        result.Add("f.write('" + filename + "',atob('" + Btoa(data) + "'),0," + codeLen + ");");
-                    }
-                    else
-                    {
-                        result.Add("f.write('" + filename + "',atob('" + Btoa(data) + "')," + current + ");");
-                    }
-                    num++;
-                    current += len;
-                }
-            }
             else
             {
                 buff = code.Substring(current, len);
+                buffLen = GetZhLen(buff);
                 result.Add("f.write('" + filename + "',atob('" + Btoa(buff) + "'),0," + codeLen + ");");
                 current += len;
+                zhCurrent += buffLen;
                 while (true)
                 {
                     if (code.Length >= current + len)
                     {
                         buff = code.Substring(current, len);
-                        result.Add("f.write('" + filename + "',atob('" + Btoa(buff) + "')," + current + ");");
+                        buffLen = GetZhLen(buff);
+                        result.Add("f.write('" + filename + "',atob('" + Btoa(buff) + "')," + zhCurrent + ");");
                         current += len;
+                        zhCurrent += buffLen;
                     }
                     else
                     {
                         buff = code.Substring(current);
-                        result.Add("f.write('" + filename + "',atob('" + Btoa(buff) + "')," + current + ");");
+                        result.Add("f.write('" + filename + "',atob('" + Btoa(buff) + "')," + zhCurrent + ");");
                         break;
                     }
 
