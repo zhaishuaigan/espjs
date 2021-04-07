@@ -228,19 +228,17 @@ namespace espjs
             };
 
             int len = 100;
-            int current = 0;
-            int zhCurrent = 0;
-            int buffLen = 0;
-            string buff;
-
             if (code.Length <= len)
             {
                 result.Add("f.write('" + filename + "',atob('" + Btoa(code) + "'));");
             }
             else
             {
-                buff = code.Substring(current, len);
-                buffLen = GetZhLen(buff);
+
+                int current = 0;
+                int zhCurrent = 0;
+                string buff = code.Substring(current, len);
+                int buffLen = GetZhLen(buff);
                 result.Add("f.write('" + filename + "',atob('" + Btoa(buff) + "'),0," + codeLen + ");");
                 current += len;
                 zhCurrent += buffLen;

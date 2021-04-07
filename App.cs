@@ -20,6 +20,7 @@ namespace espjs
         public string[] args;
         public Config config;
         public bool runOnce;
+        public Dictionary<string, string> fileHashMap = new Dictionary<string, string>();
         public App(bool runOnce = false)
         {
             if (Helper.HasPort())
@@ -436,6 +437,12 @@ namespace espjs
         public void Upload()
         {
             string path = GetParam(1, workDir);
+            bool uploadAll = true;
+            if (path == "changed")
+            {
+                uploadAll = false;
+                path = workDir;
+            }
             if (System.IO.Directory.Exists(path))
             {
                 // 文件夹
@@ -447,9 +454,29 @@ namespace espjs
                     {
                         name = ".bootcde";
                     }
-                    string code = System.IO.File.ReadAllText(file);
-                    helper.SendFile(port, name, code);
-                    Console.WriteLine(name);
+
+                    string fileTime = System.IO.File.GetLastWriteTime(file).ToString();
+                    bool fileUpdate = true;
+                    if (fileHashMap.TryGetValue(name, out string value))
+                    {
+                        if (value == fileTime)
+                        {
+                            fileUpdate = false;
+                        }
+                    }
+                    if (uploadAll || fileUpdate)
+                    {
+                        string code = System.IO.File.ReadAllText(file);
+                        helper.SendFile(port, name, code);
+                        Console.WriteLine(name);
+                    }
+                    else
+                    {
+                        Console.WriteLine(name + " 未修改");
+                    }
+
+
+                    fileHashMap[name] = fileTime;
                 }
                 helper.SendCode(port, "E.reboot();");
                 Console.WriteLine("写入完成");
