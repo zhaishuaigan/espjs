@@ -5,15 +5,16 @@ using System.IO.Ports;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Collections;
+
 namespace espjs
 {
-    public class Helper
+    public class Uart
     {
         public SerialPort sp;
         public string newLinePrev = "> ";
         public ArrayList codeHistory = new ArrayList();
         public bool showRunCode = false;
-        public Helper()
+        public Uart()
         {
             this.sp = new SerialPort();
             sp.BaudRate = 115200;
@@ -332,6 +333,8 @@ namespace espjs
         {
             SaveCode(port, filename, code, restart);
         }
+
+
 
     }
 }

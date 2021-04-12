@@ -1,31 +1,28 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Security.Principal;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace espjs
 {
     class App
     {
-        public Helper helper = new Helper();
+        public Uart uart = new Uart();
         public string port = "";
         public string workDir;
         public string execDir;
         public string code = "";
         public string[] args;
         public Config config;
+        public UserConfig userConfig;
+        public bool hasUserConfig = false;
         public bool runOnce;
         public Dictionary<string, string> fileHashMap = new Dictionary<string, string>();
         public App(bool runOnce = false)
         {
-            if (Helper.HasPort())
+            if (Uart.HasPort())
             {
-                port = Helper.GetPort();
+                port = Uart.GetPort();
             }
 
             this.runOnce = runOnce;
@@ -36,18 +33,38 @@ namespace espjs
             }
 
             // 设置工作目录
-            this.workDir = System.IO.Directory.GetCurrentDirectory();
+            this.workDir = Directory.GetCurrentDirectory();
             string execFile = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            this.execDir = System.IO.Directory.GetParent(execFile).FullName;
+            this.execDir = Directory.GetParent(execFile).FullName;
 
-            // 加载配置
-            string json = System.IO.File.ReadAllText(execDir + @"\config.json");
-            this.config = JsonConvert.DeserializeObject<Config>(json);
+            // 加载基础配置
+            this.config = Config.Load();
+            uart.sp.BaudRate = this.config.BaudRate;
 
-            // 设置串口参数
-            this.helper.sp.BaudRate = config.BaudRate;
+            // 加载用户配置
+            if (UserConfig.Exists())
+            {
+                this.hasUserConfig = true;
+                this.userConfig = UserConfig.Load();
+
+                // 设置串口参数
+                this.uart.sp.BaudRate = this.userConfig.BaudRate;
+            }
+            else
+            {
+                // 设置串口参数
+                this.uart.sp.BaudRate = config.BaudRate;
+            }
+
+
         }
 
+        /// <summary>
+        /// 获取指定位置的参数, 如果没有就返回默认值
+        /// </summary>
+        /// <param name="num">参数位置</param>
+        /// <param name="def">默认值</param>
+        /// <returns></returns>
         public string GetParam(int num, string def = "")
         {
             if (args.Length <= num)
@@ -57,6 +74,12 @@ namespace espjs
             return args[num];
         }
 
+        /// <summary>
+        /// 获取指定位置参数, 如果没有就让用户输入一个
+        /// </summary>
+        /// <param name="num">参数位置</param>
+        /// <param name="msg">提示用户输入的文本</param>
+        /// <returns></returns>
         public string GetParamOrReadLine(int num, string msg = "")
         {
             if (args.Length <= num)
@@ -67,6 +90,9 @@ namespace espjs
             return args[num];
         }
 
+        /// <summary>
+        /// 让程序进入下一次循环, 如果指定了程序只运行一次, 则程序会自动退出
+        /// </summary>
         public void Next()
         {
             if (this.runOnce)
@@ -78,6 +104,10 @@ namespace espjs
             Run(args);
         }
 
+        /// <summary>
+        /// 程序入口
+        /// </summary>
+        /// <param name="args">用户输入的参数</param>
         public void Run(string[] args)
         {
             this.args = args;
@@ -88,6 +118,29 @@ namespace espjs
             {
                 case "":
                     break;
+                case "init":
+                    if (File.Exists(workDir + @"\espjs.json"))
+                    {
+                        Console.WriteLine("espjs.json 文件已存在, 无法初始化.");
+                    }
+                    else
+                    {
+                        File.Copy(execDir + @"\espjs.json", workDir + @"\espjs.json");
+                        Console.WriteLine("创建文件 espjs.json 完成.");
+                        if (File.Exists(workDir + @"\index.js"))
+                        {
+                            Console.WriteLine("文件 index.js 已存在.");
+                        }
+                        else
+                        {
+                            File.WriteAllText(workDir + @"\index.js", "console.log('hello world');");
+                            Console.WriteLine("创建文件 index.js 完成.");
+                        }
+
+                        Console.WriteLine("初始化完成.");
+                    }
+
+                    break;
                 case "version":
                     Console.WriteLine("当前版本: " + this.config.Version);
                     break;
@@ -95,26 +148,26 @@ namespace espjs
                     string debug = GetParam(1, "true");
                     if (debug == "true")
                     {
-                        helper.showRunCode = true;
+                        uart.showRunCode = true;
                         Console.WriteLine("开启调试");
                     }
                     else
                     {
-                        helper.showRunCode = false;
+                        uart.showRunCode = false;
                         Console.WriteLine("关闭调试");
                     }
                     break;
                 case "clear":
-                    helper.codeHistory.Clear();
+                    uart.codeHistory.Clear();
                     Console.Clear();
                     break;
                 case "atob":
                     string atobStr = GetParamOrReadLine(1, "请输入要解密的字符串: ");
-                    Console.WriteLine(helper.Atob(atobStr));
+                    Console.WriteLine(uart.Atob(atobStr));
                     break;
                 case "btoa":
                     string btoaStr = GetParamOrReadLine(1, "请输入要加密的字符串: ");
-                    Console.WriteLine(helper.Btoa(btoaStr));
+                    Console.WriteLine(uart.Btoa(btoaStr));
                     break;
                 case "help":
                     Help();
@@ -128,7 +181,7 @@ namespace espjs
                     break;
                 case "module":
                 case "modules":
-                    Module();
+                    ModuleManage();
                     break;
                 default:
                     keep = true;
@@ -140,7 +193,7 @@ namespace espjs
                 Next();
                 return;
             }
-            if (!Helper.HasPort())
+            if (!Uart.HasPort())
             {
                 Console.WriteLine("没有可用端口");
                 Next();
@@ -150,21 +203,21 @@ namespace espjs
             {
                 case "restart":
                 case "reboot":
-                    helper.SendCode(port, "E.reboot();");
+                    uart.SendCode(port, "E.reboot();");
                     break;
                 case "reset":
-                    helper.SendCode(port, "reset(true);");
+                    uart.SendCode(port, "reset(true);");
                     break;
                 case "blink":
                     WriteBlinkCode();
                     break;
                 case "flash":
-                    Flash();
+                    Flash.Write(port, GetParam(1, ""));
                     break;
                 case "rm":
                 case "del":
                     name = GetParamOrReadLine(1, "请输入Storage的名称: ");
-                    helper.SendCode(port, "require('Storage').erase('" + name + "')");
+                    uart.SendCode(port, "require('Storage').erase('" + name + "')");
                     break;
                 case "ll":
                 case "dir":
@@ -174,17 +227,20 @@ namespace espjs
                 case "get":
                 case "cat":
                     name = GetParamOrReadLine(1, "请输入文件名: ");
-                    helper.SendCode(port, "console.log(require('Storage').read('" + name + "'))");
+                    uart.SendCode(port, "console.log(require('Storage').read('" + name + "'))");
                     break;
                 case "exec":
                 case "run":
-                    helper.SendCode(port, GetParamOrReadLine(1, "请输入代码"));
+                    uart.SendCode(port, GetParamOrReadLine(1, "请输入代码"));
                     break;
                 case "load":
                     LoadFile();
                     break;
                 case "upload":
                     Upload();
+                    break;
+                case "dev":
+                    new DevMode(workDir, uart, port).Run();
                     break;
                 case "boot":
                     SendBootCodeFromFile();
@@ -231,81 +287,35 @@ namespace espjs
 
         }
 
-        public void Module()
+        public void ModuleManage()
         {
             string cmd = GetParam(1, "list");
-            string dir = workDir + @"\modules\";
             string name;
-            string file;
             switch (cmd)
             {
+                case "install":
+                    Module.Install();
+                    break;
                 case "ls":
                 case "list":
-                    if (!System.IO.Directory.Exists(dir))
-                    {
-                        Console.WriteLine("当前没有安装模块");
-                        return;
-                    }
-                    string[] files = System.IO.Directory.GetFiles(dir);
-                    foreach (string value in files)
-                    {
-                        Console.WriteLine(value.Replace(dir, "").Replace(".min.js", ""));
-                    }
+                    Module.Ls();
                     break;
                 case "add":
                     name = GetParamOrReadLine(2, "请输入模块名称: ");
-                    try
-                    {
-                        string code = GetWebContent(config.Modules.Replace("[name]", name));
-                        if (!System.IO.Directory.Exists(dir))
-                        {
-                            System.IO.Directory.CreateDirectory(dir);
-                        }
-                        System.IO.File.WriteAllText(dir + name + ".min.js", code);
-                        Console.WriteLine("模块" + name + "下载完成");
-                    }
-                    catch (System.Net.WebException)
-                    {
-                        Console.WriteLine("模块下载失败, 请检测模块是否存在");
-                        return;
-                    }
+                    string url = GetParam(3, "");
+                    Module.Add(name, url);
                     break;
                 case "remove":
                 case "delete":
-                    if (!System.IO.Directory.Exists(dir))
-                    {
-                        Console.WriteLine("当前没有安装模块");
-                        return;
-                    }
                     name = GetParamOrReadLine(2, "请输入模块名称: ");
-                    file = dir + name + ".min.js";
-                    if (System.IO.File.Exists(file))
-                    {
-                        System.IO.File.Delete(file);
-                    }
-
-                    Console.WriteLine("模块删除成功");
+                    Module.Remove(name);
                     break;
             }
         }
 
-        public string GetWebContent(string url)
-        {
-            System.Net.HttpWebRequest request = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(url);
-            //声明一个HttpWebRequest请求
-            request.Timeout = 30000;
-            //设置连接超时时间
-            request.Headers.Set("Pragma", "no-cache");
-            System.Net.HttpWebResponse response = (System.Net.HttpWebResponse)request.GetResponse();
-            System.IO.Stream streamReceive = response.GetResponseStream();
-            Encoding encoding = Encoding.GetEncoding("UTF-8");
-            System.IO.StreamReader streamReader = new StreamReader(streamReceive, encoding);
-            return streamReader.ReadToEnd();
-        }
-
         public void Boot()
         {
-            if (Helper.HasPort())
+            if (Uart.HasPort())
             {
             }
             // this.helper.SaveCode();
@@ -314,28 +324,9 @@ namespace espjs
         public void WriteBlinkCode()
         {
             string code = @"var val = false;setInterval(function(){digitalWrite(NodeMCU.D4,val);val=!val;},1000);";
-            helper.SetBootCode(port, code);
+            uart.SetBootCode(port, code);
         }
 
-        public void Flash()
-        {
-
-
-            string name = GetParamOrReadLine(1, "请输入开发板类型: ");
-            if (config.Flash.TryGetValue(name, out string value))
-            {
-                string cmd = "esptool.exe " + value.Replace("[port]", this.port);
-                string bat = execDir + @"\resources\flash.bat";
-                System.IO.File.WriteAllText(bat, cmd);
-                // 这里需要关闭端口, 否则会导致esptool下载固件失败
-                helper.ClosePort();
-                LaunchBat(bat);
-            }
-            else
-            {
-                Console.WriteLine("错误: 没有在config.json中找到对用的flash配置");
-            }
-        }
         public void LaunchBat(string batName, string argument = "", string workingDirectory = "")
         {
 
@@ -361,7 +352,7 @@ namespace espjs
             switch (cmd)
             {
                 case "list":
-                    string[] ports = Helper.GetPorts();
+                    string[] ports = Uart.GetPorts();
                     if (ports.Length == 0)
                     {
                         Console.WriteLine("没有可用端口");
@@ -389,27 +380,27 @@ namespace espjs
             {
                 case "ls":
                 case "list":
-                    helper.SendCode(port, @"(function(){var list=require('Storage').list();console.log(list.join('\n'));})();");
+                    uart.SendCode(port, @"(function(){var list=require('Storage').list();console.log(list.join('\n'));})();");
                     break;
                 case "free":
-                    helper.SendCode(port, "require('Storage').getFree()");
+                    uart.SendCode(port, "require('Storage').getFree()");
                     break;
                 case "clear":
-                    helper.SendCode(port, "require('Storage').eraseAll();E.reboot();");
+                    uart.SendCode(port, "require('Storage').eraseAll();E.reboot();");
                     break;
                 case "delete":
                 case "remove":
                     name = GetParamOrReadLine(2, "请输入Storage的名称: ");
-                    helper.SendCode(port, "require('Storage').erase('" + name + "')");
+                    uart.SendCode(port, "require('Storage').erase('" + name + "')");
                     break;
                 case "get":
                 case "read":
                     name = GetParamOrReadLine(2, "请输入Storage的名称: ");
-                    helper.SendCode(port, "console.log(require('Storage').read('" + name + "'))");
+                    uart.SendCode(port, "console.log(require('Storage').read('" + name + "'))");
                     break;
                 case "save":
                 case "write":
-                    helper.SendCode(port, "require('Storage').write('" + GetParamOrReadLine(2, "请输入Storage的名称: ") + "','" + GetParamOrReadLine(3, "请输入Storage的内容: ") + "')");
+                    uart.SendCode(port, "require('Storage').write('" + GetParamOrReadLine(2, "请输入Storage的名称: ") + "','" + GetParamOrReadLine(3, "请输入Storage的内容: ") + "')");
                     break;
             }
 
@@ -418,35 +409,41 @@ namespace espjs
         public void LoadFile()
         {
             string filename = GetParamOrReadLine(1, "请输入文件名: ");
-            if (!System.IO.File.Exists(filename))
+            if (!File.Exists(filename))
             {
                 filename = workDir + @"\" + filename;
             }
 
 
-            if (!System.IO.File.Exists(filename))
+            if (!File.Exists(filename))
             {
                 Console.WriteLine("文件不存在: " + filename);
                 return;
             }
 
-            string code = System.IO.File.ReadAllText(filename);
-            helper.SendCode(port, code);
+            string code = File.ReadAllText(filename);
+            uart.SendCode(port, code);
+        }
+
+        public void Dev()
+        {
+
         }
 
         public void Upload()
         {
             string path = GetParam(1, workDir);
+            string restart = GetParam(2, "true");
             bool uploadAll = true;
             if (path == "changed")
             {
                 uploadAll = false;
                 path = workDir;
             }
-            if (System.IO.Directory.Exists(path))
+            if (Directory.Exists(path))
             {
                 // 文件夹
-                string[] files = System.IO.Directory.GetFiles(path, "*", System.IO.SearchOption.AllDirectories);
+                string[] files = Directory.GetFiles(path, "*", SearchOption.AllDirectories);
                 foreach (string file in files)
                 {
                     string name = file.Replace(path + "\\", "").Replace("\\", "/");
@@ -455,7 +452,7 @@ namespace espjs
                         name = ".bootcde";
                     }
 
-                    string fileTime = System.IO.File.GetLastWriteTime(file).ToString();
+                    string fileTime = File.GetLastWriteTime(file).ToString();
                     bool fileUpdate = true;
                     if (fileHashMap.TryGetValue(name, out string value))
                     {
@@ -466,8 +463,8 @@ namespace espjs
                     }
                     if (uploadAll || fileUpdate)
                     {
-                        string code = System.IO.File.ReadAllText(file);
-                        helper.SendFile(port, name, code);
+                        string code = File.ReadAllText(file);
+                        uart.SendFile(port, name, code);
                         Console.WriteLine(name);
                     }
                     else
@@ -478,14 +475,19 @@ namespace espjs
 
                     fileHashMap[name] = fileTime;
                 }
-                helper.SendCode(port, "E.reboot();");
+
+                if (restart == "true")
+                {
+                    uart.SendCode(port, "E.reboot();");
+                }
+
                 Console.WriteLine("写入完成");
             }
-            else if (System.IO.File.Exists(path))
+            else if (File.Exists(path))
             {
                 // 文件
-                string code = System.IO.File.ReadAllText(path);
-                helper.SendFile(port, path, code);
+                string code = File.ReadAllText(path);
+                uart.SendFile(port, path, code);
                 return;
             }
             else
@@ -498,45 +500,45 @@ namespace espjs
         public void SendFile()
         {
             string filename = GetParamOrReadLine(1, "请输入文件名: ");
-            if (!System.IO.File.Exists(filename))
+            if (!File.Exists(filename))
             {
                 filename = workDir + @"\" + filename;
             }
 
 
-            if (!System.IO.File.Exists(filename))
+            if (!File.Exists(filename))
             {
                 Console.WriteLine("文件不存在: " + filename);
                 return;
             }
 
             string code = System.IO.File.ReadAllText(filename);
-            helper.SendCode(port, code);
+            uart.SendCode(port, code);
         }
 
         public void SendBootCodeFromFile()
         {
             string filename = GetParamOrReadLine(1, "请输入文件名: ");
-            if (!System.IO.File.Exists(filename))
+            if (!File.Exists(filename))
             {
                 filename = workDir + @"\" + filename;
             }
 
 
-            if (!System.IO.File.Exists(filename))
+            if (!File.Exists(filename))
             {
                 Console.WriteLine("文件不存在: " + filename);
                 return;
             }
 
-            string code = System.IO.File.ReadAllText(filename);
-            helper.SetBootCode(port, code);
+            string code = File.ReadAllText(filename);
+            uart.SetBootCode(port, code);
         }
 
         public void StartShellMode()
         {
             Console.WriteLine("已进入shell模式, 输入exit可以退出shell模式.");
-            helper.newLinePrev = "# ";
+            uart.newLinePrev = "# ";
             while (true)
             {
                 Console.Write("# ");
@@ -549,11 +551,11 @@ namespace espjs
 
                 if (newLine != "")
                 {
-                    helper.SendCode(port, newLine);
+                    uart.SendCode(port, newLine);
                 }
 
             }
-            helper.newLinePrev = "> ";
+            uart.newLinePrev = "> ";
         }
 
         public void StartInputMode()
@@ -572,7 +574,7 @@ namespace espjs
             Console.Write("是否运行代码(y/n): ");
             if (Console.ReadLine() != "n")
             {
-                helper.SendCode(port, code);
+                uart.SendCode(port, code);
             }
             code = "";
         }
