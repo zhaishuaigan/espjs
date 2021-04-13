@@ -2,9 +2,13 @@
     "BaudRate": 115200,
     "Board": "",
     "Flash": "",
-    "LastUpdate": 0,
     "Modules": {
 
-    }
-
+    },
+    "Ignore": [
+        "espjs.json",
+        "package.json",
+        ".git/*",
+        "node_modules/*"
+    ]
 }

@@ -75,6 +75,11 @@
   <ItemGroup>
     <Compile Include="App.cs" />
     <Compile Include="DevMode.cs" />
+    <Compile Include="Storage.cs" />
+    <Compile Include="InputMode.cs" />
+    <Compile Include="ShellMode.cs" />
+    <Compile Include="Init.cs" />
+    <Compile Include="Upload.cs" />
     <Compile Include="Flash.cs" />
     <Compile Include="Module.cs" />
     <Compile Include="UserConfig.cs" />
@@ -100,6 +105,9 @@
     <None Include="使用说明.md">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <Content Include="help.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="resources\espruino_2v08_esp8266_4mb_combined_4096.bin">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

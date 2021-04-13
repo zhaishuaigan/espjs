@@ -4,6 +4,9 @@ using System.Text;
 
 namespace espjs
 {
+    /// <summary>
+    /// 模块管理相关操作 增删改查
+    /// </summary>
     public class Module
     {
         public static string workDir = Directory.GetCurrentDirectory();

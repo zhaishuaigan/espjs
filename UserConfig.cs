@@ -8,12 +8,15 @@ using System.Threading.Tasks;
 
 namespace espjs
 {
+    /// <summary>
+    /// 用户配置
+    /// </summary>
     class UserConfig
     {
         public int BaudRate { get; set; }
-        public int LastUpdate { get; set; }
         public string Board { get; set; }
         public string Flash { get; set; }
+        public string[] Ignore { get; set; }
         public Dictionary<string, string> Modules { get; set; }
 
         /// <summary>

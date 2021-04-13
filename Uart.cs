@@ -8,6 +8,9 @@ using System.Collections;
 
 namespace espjs
 {
+    /// <summary>
+    /// 串口相关操作
+    /// </summary>
     public class Uart
     {
         public SerialPort sp;

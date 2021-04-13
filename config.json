@@ -1,5 +1,5 @@
 {
-    "Version": "1.0.4",
+    "Version": "1.0.5",
     "BaudRate": 115200,
     "Modules": "http://www.espruino.com/modules/[name].min.js",
     "Flash": {

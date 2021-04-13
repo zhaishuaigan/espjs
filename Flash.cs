@@ -4,6 +4,9 @@ using System.IO;
 
 namespace espjs
 {
+    /// <summary>
+    /// 写入Espruino固件专用类
+    /// </summary>
     public class Flash
     {
         public static void Write(string port, string board)

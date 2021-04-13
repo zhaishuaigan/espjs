@@ -1,0 +1,22 @@
+  命令            帮助内容
+ help            显示帮助内容
+ exit|quit       退出程序
+ port            列出所有设备
+ port com3       选择com3设备
+ flash [board]   写入固件, 目前支持 esp01,esp01s,esp8288, 如果有其他板子, 可以配置config.json
+ blink           写入闪烁灯程序
+ boot [filename]         写入启动程序, 如: boot index.js 将把当前目录中的index.js文件写入到设备的 .bootcde
+ load [filename]         执行单个代码文件, 如: load blink.js 将在设备中执行当前目录下的blink.js文件
+ upload [filename|dir]   将目录或文件写入设备, 如: upload 将把当前目录中的所有文件直接写入设备, upload blink.js 将把 blink.js写入到设备的 blink.js
+ dev             进入开发模式, 自动监控文件变化, 并写入到设备.
+ ll|ls|dir       列出设备中的Storage
+ storage [option]        Storage相关操作
+     list                列出设备中的Storage
+     clear               清除设备中所有的Storage
+     write [name] [content]      写入Storage
+     read [name]                 读取Storage
+     delete [name]               删除Storage
+ exec|run [code]         在设备中运行单行js, 代码不可包含空格
+ shell           进入设备执行js, 输入exit|quit退出shell模式
+ <<<             进入粘贴代码模式, 在新行输入再次输入 <<< 退出粘贴模式, 并提示是否运行代码
+

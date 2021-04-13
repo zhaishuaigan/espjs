@@ -7,25 +7,31 @@ namespace espjs
 {
     public class DevMode
     {
-        public Dictionary<string, string> fileHashMap = new Dictionary<string, string>();
-        public string wordDir = "";
+        public string workDir = "";
         public FileSystemWatcher watcher;
         public Uart uart;
         public string port;
         public Queue files = new Queue();
         public System.Timers.Timer timer = new System.Timers.Timer();
-        public DevMode(string wordDir, Uart uart, string port)
+        private readonly UserConfig config;
+        private readonly bool hasUserConfig = false;
+        public DevMode(string workDir, Uart uart, string port)
         {
-            this.wordDir = wordDir;
+            this.workDir = workDir;
             this.uart = uart;
             this.port = port;
+            if (UserConfig.Exists())
+            {
+                hasUserConfig = true;
+                config = UserConfig.Load();
+            }
         }
 
         public void Run()
         {
             watcher = new FileSystemWatcher
             {
-                Path = wordDir,
+                Path = workDir,
                 IncludeSubdirectories = true,//全局文件监控，包括子目录
                 EnableRaisingEvents = true   //启用文件监控
             };
@@ -64,8 +70,20 @@ namespace espjs
             while (files.Count > 0)
             {
                 string file = files.Dequeue().ToString();
-                string filename = wordDir + @"\" + file;
+                string filename = workDir + @"\" + file;
                 string name = file.Replace("\\", "/");
+
+                if (InIgnore(name))
+                {
+                    Console.WriteLine("忽略文件修改: " + name);
+                    continue;
+                }
+
+                if (name == "index.js" || name == "main.js")
+                {
+                    name = ".bootcde";
+                }
+
                 string code = File.ReadAllText(filename);
                 Console.WriteLine("正在写入文件: " + name);
                 uart.SendFile(port, name, code);
@@ -105,6 +123,32 @@ namespace espjs
             }
 
 
+        }
+
+        public bool InIgnore(string path)
+        {
+            if (!hasUserConfig)
+            {
+                return false;
+            }
+            foreach (string value in config.Ignore)
+            {
+                string rule = value.Replace("*", "");
+                if (value.EndsWith("*"))
+                {
+                    if (path.Length >= rule.Length && rule == path.Substring(0, rule.Length))
+                    {
+                        return true;
+                    }
+                }
+                else if (rule == path)
+                {
+                    return true;
+                }
+
+
+            }
+            return false;
         }
 
     }
