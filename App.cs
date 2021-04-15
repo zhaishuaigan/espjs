@@ -219,6 +219,7 @@ namespace espjs
                 case "ll":
                 case "ls":
                 case "dir":
+                case "free":
                 case "storage":
                     Storage.Run(uart, port, args);
                     break;
@@ -300,7 +301,15 @@ namespace espjs
                     }
                     foreach (string port in ports)
                     {
-                        Console.WriteLine(port);
+                        if (port == this.port)
+                        {
+                            Console.WriteLine(port + " 当前选择");
+                        }
+                        else
+                        {
+                            Console.WriteLine(port);
+                        }
+
                     }
                     break;
 
@@ -309,7 +318,8 @@ namespace espjs
                     break;
 
                 default:
-                    port = GetParamOrReadLine(1, "请输入要设置的端口: ");
+                    this.port = GetParamOrReadLine(1, "请输入要设置的端口: ");
+                    this.port = this.port.ToUpper();
                     break;
             }
         }

@@ -53,12 +53,14 @@ namespace espjs
                 char devKey = Console.ReadKey(true).KeyChar;
                 if (devKey == 'c')
                 {
+                    Console.WriteLine("已退出开发模式");
                     Stop();
                     break;
                 }
 
                 if (devKey == 'r')
                 {
+                    Console.WriteLine("重启设备");
                     uart.SendCode(port, "E.reboot();");
                 }
             }

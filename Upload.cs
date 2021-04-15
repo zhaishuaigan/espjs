@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 
 namespace espjs
 {
@@ -46,9 +47,12 @@ namespace espjs
 
                     string code = File.ReadAllText(file);
                     uart.SendFile(port, name, code);
-                    Console.WriteLine(name);
+                    Console.WriteLine(name + " 写入完成");
+                    // 这里需要暂停一下, 每个文件之间需要间隔一段时间, 否则容易造成单片机死机
+                    Thread.Sleep(1000);
                 }
-                Console.WriteLine("写入完成");
+                // uart.SendCode(port, "E.reboot();");
+                Console.WriteLine("全部文件已写入完成.");
             }
             else if (File.Exists(path))
             {

@@ -29,7 +29,14 @@ namespace espjs
                     uart.SendCode(port, @"(function(){var list=require('Storage').list();console.log(list.join('\n'));})();");
                     break;
                 case "free":
-                    uart.SendCode(port, "require('Storage').getFree()");
+                    uart.SendCode(port, "(_=>{");
+                    uart.SendCode(port, "mem=process.memory();");
+                    uart.SendCode(port, "usage=mem.usage*mem.blocksize + 'B';");
+                    uart.SendCode(port, "total=mem.total*mem.blocksize + 'B';");
+                    uart.SendCode(port, "s=require('Storage').getFree() + 'B';");
+                    uart.SendCode(port, "console.log('storage free: ', s);");
+                    uart.SendCode(port, "console.log('memory used: ' + usage + '/' + total);");
+                    uart.SendCode(port, "})();");
                     break;
                 case "clear":
                     uart.SendCode(port, "require('Storage').eraseAll();E.reboot();");
@@ -43,6 +50,7 @@ namespace espjs
                     }
                     uart.SendCode(port, "require('Storage').erase('" + args[2] + "')");
                     break;
+                case "cat":
                 case "get":
                 case "read":
                     if (args.Length <= 1)

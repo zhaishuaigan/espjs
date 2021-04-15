@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
-using System.IO;
 using System.IO.Ports;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -17,6 +15,9 @@ namespace espjs
         public string newLinePrev = "> ";
         public ArrayList codeHistory = new ArrayList();
         public bool showRunCode = false;
+
+        public int commandSplitTime = 100; // 每条命令间隔时间 (毫秒)
+        public int codeSplitLen = 30; // 代码分割块长度
         public Uart()
         {
             this.sp = new SerialPort();
@@ -42,81 +43,36 @@ namespace espjs
             return ports.Length >= 1;
         }
 
-        public static string GetRootPath()
-        {
-            return Directory.GetCurrentDirectory();
-        }
-
-        public static string GetExecDir()
-        {
-            return GetRootPath();
-        }
-
-        public string[] GetEspruinoBinList()
-        {
-            string binPath = GetRootPath() + "/bin/espruino/";
-            FileInfo[] files = new DirectoryInfo(binPath).GetFiles();
-            string[] result = new String[files.Length];
-            for (int i = 0; i < files.Length; i++)
-            {
-                result[i] = files[i].Name;
-            }
-            return result;
-        }
-
-        public void DownloadEspruinoToEsp01s(string port)
-        {
-            var baud = "115200";
-            var bin = "./espruino/espruino_2v08_esp8266_combined_512.bin";
-            var flashSize = "512KB";
-            var argument = "--port " + port + " --baud " + baud + " write_flash --flash_size " + flashSize + " 0x0000 " + bin;
-            DownloadEspruino(argument);
-        }
-
-        public void DownloadEspruinoToEsp8266(string port)
-        {
-            var baud = "115200";
-            var bin = "./espruino/espruino_2v08_esp8266_4mb_combined_4096.bin";
-            var flashSize = "4MB";
-            var argument = "--port " + port + " --baud " + baud + " write_flash --flash_size " + flashSize + " 0x0000 " + bin;
-            DownloadEspruino(argument);
-        }
-        public void DownloadEspruino(string argument)
-        {
-
-            LaunchBat(Environment.CurrentDirectory + "/bin/espruino.bat", argument);
-        }
-
-        public void LaunchBat(string batName, string argument)
-        {
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
-                CreateNoWindow = true,
-                FileName = batName,
-                Arguments = argument
-            };
-            // startInfo.WindowStyle = ProcessWindowStyle.Maximized;
-            Process.Start(startInfo);
-        }
-
+        /// <summary>
+        /// 发送代码
+        /// </summary>
+        /// <param name="port"></param>
+        /// <param name="code"></param>
         public void SendCode(string port, string code)
         {
             try
             {
                 OpenPort(port);
+                code = code.Trim();
+                // 这里需要暂停一下, 每个命令之间需要间隔一段时间, 否则容易造成单片机死机
+                if (code == "sleep")
+                {
+                    Thread.Sleep(commandSplitTime);
+                    return;
+                }
                 this.codeHistory.Add(code);
-
-                if (this.codeHistory.Count > 100)
+                if (this.codeHistory.Count > 50)
                 {
                     this.codeHistory.RemoveAt(0);
                 }
-                Thread.Sleep(100);
+
+
                 sp.WriteLine(code);
                 //sp.Close();
             }
             catch (Exception)
             {
-                Console.WriteLine("代码发送失败, 可能端口被占用了");
+                Console.WriteLine("代码发送失败, 可能端口被占用了.");
             }
 
         }
@@ -126,14 +82,18 @@ namespace espjs
             try
             {
                 string str = sp.ReadLine();
-                str = new Regex("^>").Replace(str, "").TrimEnd();
+                str = new Regex("^>").Replace(str, "");
+                str = new Regex("^:").Replace(str, "");
+                str = str.TrimEnd();
                 switch (str)
                 {
                     case "":
                     case ">":
                     case " ":
                     case "=undefined":
+                    case "=null":
                     case "=true":
+                    case "=false":
                     case "=function () { [native code] }":
 
                         break;
@@ -191,7 +151,7 @@ namespace espjs
                 byte[] data = Convert.FromBase64String(value);
                 decodedString = System.Text.Encoding.UTF8.GetString(data);
             }
-            catch (System.FormatException)
+            catch (FormatException)
             {
                 Console.WriteLine("字符串解密失败");
             }
@@ -223,49 +183,59 @@ namespace espjs
         {
 
             code = new Regex("\r").Replace(code, "");
+            code = new Regex("\n +").Replace(code, "\n");
             code = code.Trim();
+
             int codeLen = GetZhLen(code);
             filename = filename.Trim();
             ArrayList result = new ArrayList
             {
-                "f = require('Storage');",
+                "global.f=require('Storage');",
+                "sleep",
+                "(_=>{global.c=_=>{if(f.getFree()<1000){console.log('Storage overflow');return false;}return true;}})();",
+                "sleep",
+                "(_=>{global.w=function(code,offset){c()&&f.write('" + filename + "',code,offset)}})();",
+                "sleep",
             };
 
-            int len = 100;
-            if (code.Length <= len)
+            // 这里设置每次写入的代码长度
+            if (code.Length <= codeSplitLen)
             {
                 result.Add("f.write('" + filename + "',atob('" + Btoa(code) + "'));");
+                result.Add("sleep");
             }
             else
             {
-
                 int current = 0;
                 int zhCurrent = 0;
-                string buff = code.Substring(current, len);
+                string buff = code.Substring(current, codeSplitLen);
                 int buffLen = GetZhLen(buff);
                 result.Add("f.write('" + filename + "',atob('" + Btoa(buff) + "'),0," + codeLen + ");");
-                current += len;
+                current += codeSplitLen;
                 zhCurrent += buffLen;
                 while (true)
                 {
-                    if (code.Length >= current + len)
+                    result.Add("sleep");
+                    if (code.Length >= current + codeSplitLen)
                     {
-                        buff = code.Substring(current, len);
+                        buff = code.Substring(current, codeSplitLen);
                         buffLen = GetZhLen(buff);
-                        result.Add("f.write('" + filename + "',atob('" + Btoa(buff) + "')," + zhCurrent + ");");
-                        current += len;
+                        result.Add("w(atob('" + Btoa(buff) + "')," + zhCurrent + ");");
+                        current += codeSplitLen;
                         zhCurrent += buffLen;
                     }
                     else
                     {
                         buff = code.Substring(current);
-                        result.Add("f.write('" + filename + "',atob('" + Btoa(buff) + "')," + zhCurrent + ");");
+                        result.Add("w(atob('" + Btoa(buff) + "')," + zhCurrent + ");");
                         break;
                     }
 
                 }
             }
 
+            result.Add("f = null;");
+            result.Add("w = null;");
             return result;
         }
 
