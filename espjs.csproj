@@ -75,6 +75,7 @@
   <ItemGroup>
     <Compile Include="App.cs" />
     <Compile Include="DevMode.cs" />
+    <Compile Include="Script.cs" />
     <Compile Include="Storage.cs" />
     <Compile Include="InputMode.cs" />
     <Compile Include="ShellMode.cs" />
@@ -102,18 +103,27 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
+    <None Include="resources\esp32\bootloader.bin">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="resources\esp32\espruino_esp32.bin">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="resources\esp32\partitions_espruino.bin">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="resources\esp8266\espruino_2v09_esp8266_4mb_combined_4096.bin">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="resources\esp8266\espruino_2v09_esp8266_combined_512.bin">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="使用说明.md">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <Content Include="help.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <None Include="resources\espruino_2v08_esp8266_4mb_combined_4096.bin">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="resources\espruino_2v08_esp8266_combined_512.bin">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.7.2">

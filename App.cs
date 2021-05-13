@@ -2,6 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace espjs
 {
@@ -181,9 +182,30 @@ namespace espjs
                 case "port":
                     Port();
                     break;
+                case "baud":
+                    if (args.Length == 1)
+                    {
+                        Console.WriteLine("当前波特率: " + uart.sp.BaudRate);
+                    }
+                    else
+                    {
+                        uart.sp.BaudRate = Convert.ToInt32(GetParam(1, "115200"));
+                        if (UserConfig.Exists())
+                        {
+                            userConfig.BaudRate = uart.sp.BaudRate;
+                            userConfig.Save();
+                        }
+                    }
+                    break;
                 case "module":
                 case "modules":
                     ModuleManage();
+                    break;
+                case "run":
+                    if (Script.TryGetValue(GetParamOrReadLine(1, "请输入要执行的脚本名称: "), out string value))
+                    {
+                        Run(value.Split(' '));
+                    }
                     break;
                 default:
                     return false;
@@ -207,7 +229,7 @@ namespace espjs
                     uart.SendCode(port, "reset(true);");
                     break;
                 case "blink":
-                    new Upload(workDir, uart, port).WriteBlinkCode();
+                    new Upload(workDir, uart, port).WriteBlinkCode(GetParam(1, "NodeMCU.D4"));
                     break;
                 case "flash":
                     Flash.Write(port, GetParam(1, ""));
@@ -243,11 +265,20 @@ namespace espjs
                 case "boot":
                     new Upload(workDir, uart, port).SendBootCodeFromFile(GetParamOrReadLine(1, "请输入要启动的文件名: "));
                     break;
+                case "connect":
+                    new Upload(workDir, uart, port).ConnectWifi(GetParamOrReadLine(1, "请输入wifi名称: "), GetParamOrReadLine(2, "请输入wifi密码: "));
+                    break;
+                case "status":
+                    new Upload(workDir, uart, port).GetStatus();
+                    break;
                 case "shell":
                     ShellMode.Run(uart, port);
                     break;
                 case "<<<":
                     InputMode.Run(uart, port);
+                    break;
+                case "hex":
+                    uart.SendHex(port, String.Join(" ", args).Replace("hex ", ""));
                     break;
                 default:
                     Console.WriteLine("命令不存在: " + cmd);

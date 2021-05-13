@@ -3,8 +3,10 @@
     "BaudRate": 115200,
     "Modules": "http://www.espruino.com/modules/[name].min.js",
     "Flash": {
-        "esp01": "--port [port] --baud 115200 write_flash --flash_size 512KB 0x0000 espruino_2v08_esp8266_combined_512.bin",
-        "esp01s": "--port [port] --baud 115200 write_flash --flash_size 512KB 0x0000 espruino_2v08_esp8266_combined_512.bin",
-        "esp8266": "--port [port] --baud 115200 write_flash --flash_size 4MB 0x0000 espruino_2v08_esp8266_4mb_combined_4096.bin"
+        "esp01": "--port [port] --baud 115200 write_flash --flash_size 512KB 0x0000 esp8266/espruino_2v09_esp8266_combined_512.bin",
+        "esp01s": "--port [port] --baud 115200 write_flash --flash_size 512KB 0x0000 esp8266/espruino_2v09_esp8266_combined_512.bin",
+        "esp8266": "--port [port] --baud 115200 write_flash --flash_size 4MB 0x0000 esp8266/espruino_2v09_esp8266_4mb_combined_4096.bin",
+        "esp32": "--chip esp32 --port [port] --baud 921600 --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect 0x1000 esp32/bootloader.bin 0x8000 esp32/partitions_espruino.bin  0x10000 esp32/espruino_esp32.bin",
+        "esp32c3": "--chip esp32c3 --port [port] --baud 921600 --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect 0x1000 esp32/bootloader.bin 0x8000 esp32/partitions_espruino.bin  0x10000 esp32/espruino_esp32.bin"
     }
 }

@@ -121,9 +121,9 @@ namespace espjs
             uart.SetBootCode(port, code);
         }
 
-        public void WriteBlinkCode()
+        public void WriteBlinkCode(string gpio)
         {
-            string code = @"var val = false;setInterval(function(){digitalWrite(NodeMCU.D4,val);val=!val;},1000);";
+            string code = @"var val = false;setInterval(function(){digitalWrite(" + gpio + ",val);val=!val;},1000);";
             uart.SetBootCode(port, code);
         }
 
@@ -152,6 +152,34 @@ namespace espjs
 
             }
             return false;
+        }
+
+        public void ConnectWifi(string ssid, string password)
+        {
+            var code = "require('Wifi').connect('" + ssid + "',{password:'" + password + "'}," +
+                " error =>{" +
+                "  if (error) {" +
+                "    console.log('error: ', error);" +
+                "  } else {" +
+                "   require('Wifi').save();" +
+                "   require('Wifi').getIP((err, ipinfo) => {" +
+                "    console.log('connected: ', ipinfo)" +
+                "   });" +
+                "  }" +
+                " });";
+            uart.SendCode(port, code);
+        }
+
+        public void GetStatus()
+        {
+            var code = "" +
+                "(_=>{" +
+                "  require('Wifi').getIP((err, ipinfo) => {" +
+                "    console.log('err: ', err);" +
+                "    console.log('IP info: ', ipinfo);" +
+                "  });" +
+                "})();";
+            uart.SendCode(port, code);
         }
     }
 }

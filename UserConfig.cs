@@ -17,6 +17,7 @@ namespace espjs
         public string Board { get; set; }
         public string Flash { get; set; }
         public string[] Ignore { get; set; }
+        public Dictionary<string, string> Scripts { get; set; }
         public Dictionary<string, string> Modules { get; set; }
 
         /// <summary>

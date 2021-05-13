@@ -2,6 +2,9 @@
     "BaudRate": 115200,
     "Board": "",
     "Flash": "",
+    "Scripts": {
+        "test": "blink"
+    },
     "Modules": {
 
     },

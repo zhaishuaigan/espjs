@@ -43,12 +43,32 @@ namespace espjs
             return ports.Length >= 1;
         }
 
+        public static byte[] HexStringToBytes(string hs)
+        {
+            string[] strArr = hs.Trim().Split(' ');
+            byte[] b = new byte[strArr.Length];
+            //逐个字符变为16进制字节数据
+            for (int i = 0; i < strArr.Length; i++)
+            {
+                b[i] = Convert.ToByte(strArr[i], 16);
+            }
+            //按照指定编码将字节数组变为字符串
+            return b;
+        }
+
+        public void SendHex(string port, string code)
+        {
+            SendCode(port, code, true);
+        }
+
+
+
         /// <summary>
         /// 发送代码
         /// </summary>
         /// <param name="port"></param>
         /// <param name="code"></param>
-        public void SendCode(string port, string code)
+        public void SendCode(string port, string code, bool hex = false)
         {
             try
             {
@@ -66,8 +86,17 @@ namespace espjs
                     this.codeHistory.RemoveAt(0);
                 }
 
+                if (hex)
+                {
+                    byte[] v = HexStringToBytes(code);
+                    sp.Write(v, 0, v.Length);
+                }
+                else
+                {
+                    sp.WriteLine(code);
+                }
 
-                sp.WriteLine(code);
+
                 //sp.Close();
             }
             catch (Exception)
